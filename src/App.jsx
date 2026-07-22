@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Navbar from './components/Navbar.jsx'
 import ControlsPanel from './components/ControlsPanel.jsx'
 import PreviewPanel from './components/PreviewPanel.jsx'
 import Footer from './components/Footer.jsx'
 import Toast from './components/Toast.jsx'
 import { computeMatrix, renderToCanvas, overlayLogo, buildSVG } from './utils/qrUtils.js'
+import { buildPayload, DEFAULT_FIELDS } from './utils/payloadBuilders.js'
 
 const STORAGE_KEY = 'qrcraft_v4'
-const DEFAULTS = { fgColor: '#000000', bgColor: '#ffffff', size: 300, margin: 4, ecLevel: 'M', logoSize: 25, darkMode: false, qrStyle: 'classic' }
+const DEFAULTS = { fgColor: '#000000', bgColor: '#ffffff', size: 300, margin: 4, ecLevel: 'M', logoSize: 25, darkMode: false, qrStyle: 'classic', qrType: 'web' }
 
 function loadSaved() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } }
@@ -31,8 +32,13 @@ export default function App() {
   const [logoSize, setLogoSize] = useState(DEFAULTS.logoSize)
   const [qrStyle,  setQrStyle]  = useState(DEFAULTS.qrStyle)
 
-  // ── Text input
-  const [inputText, setInputText] = useState('')
+  // ── Content type + fields
+  const [qrType,     setQrType]     = useState(DEFAULTS.qrType)
+  const [typeFields, setTypeFields] = useState(DEFAULT_FIELDS)
+  const updateField = useCallback((key, value) => {
+    setTypeFields(prev => ({ ...prev, [key]: value }))
+  }, [])
+  const payload = useMemo(() => buildPayload(qrType, typeFields), [qrType, typeFields])
 
   // ── Logo
   const [logoData,     setLogoData]     = useState(null)
@@ -61,7 +67,7 @@ export default function App() {
 
   // Always-fresh snapshot — updated on every render to avoid stale closures
   const snap = useRef({})
-  snap.current = { fgColor, bgColor, size, margin, ecLevel, logoSize, logoData, logoImage, logoECForced, inputText, darkMode, qrStyle }
+  snap.current = { fgColor, bgColor, size, margin, ecLevel, logoSize, logoData, logoImage, logoECForced, inputText: payload, darkMode, qrStyle, qrType, typeFields }
 
   // ── Dark mode
   useEffect(() => {
@@ -76,7 +82,9 @@ export default function App() {
     setSize(s.size);       setMargin(s.margin)
     setEcLevel(s.ecLevel); setLogoSize(s.logoSize)
     setDarkMode(s.darkMode)
-    if (s.qrStyle) setQrStyle(s.qrStyle)
+    if (s.qrStyle)    setQrStyle(s.qrStyle)
+    if (s.qrType)     setQrType(s.qrType)
+    if (s.typeFields) setTypeFields({ ...DEFAULT_FIELDS, ...s.typeFields })
   }, [])
 
   function persistSettings() {
@@ -87,6 +95,7 @@ export default function App() {
         size: s.size,       margin: s.margin,
         ecLevel: s.ecLevel, logoSize: s.logoSize,
         darkMode: s.darkMode, qrStyle: s.qrStyle,
+        qrType: s.qrType, typeFields: s.typeFields,
       }))
     } catch {}
   }
@@ -154,12 +163,12 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fgColor, bgColor, size, margin, ecLevel, logoSize, logoImage, qrStyle, scheduleAutoGenerate])
 
-  // Re-generate when text changes (debounced)
+  // Re-generate when content payload changes (debounced)
   useEffect(() => {
     scheduleAutoGenerate()
     return () => clearTimeout(debounceRef.current)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputText, scheduleAutoGenerate])
+  }, [payload, scheduleAutoGenerate])
 
   // ── Downloads
   function downloadPNG() {
@@ -180,10 +189,9 @@ export default function App() {
   }
 
   async function copyToClipboard() {
-    const text = snap.current.inputText.trim()
-    if (!text) { showError('Nothing to copy — enter some content first.'); return }
+    if (!payload.trim()) { showError('Nothing to copy — enter some content first.'); return }
     try {
-      await navigator.clipboard.writeText(text)
+      await navigator.clipboard.writeText(payload)
       showSuccess('Content copied to clipboard!')
     } catch {
       showError('Copy failed — please copy the text manually.')
@@ -192,7 +200,8 @@ export default function App() {
 
   // ── Clear
   function clearAll() {
-    setInputText(''); setSvgData(null); setQrVisible(false)
+    setTypeFields(DEFAULT_FIELDS)
+    setSvgData(null); setQrVisible(false)
     setResolution(''); setErrorMsg(''); setSuccessMsg('')
     clearTimeout(debounceRef.current)
   }
@@ -263,8 +272,8 @@ export default function App() {
         r.readAsText(file, 'UTF-8')
       })
       const trimmed = content.trim().slice(0, 2300)
-      setInputText(trimmed)
-      setTimeout(() => generateRef.current?.(trimmed), 0)
+      setQrType('text')
+      setTypeFields(prev => ({ ...prev, text: trimmed }))
     } catch { showError('Could not read the file.') }
   }
 
@@ -288,9 +297,11 @@ export default function App() {
         {/* ── Left: Controls panel ── */}
         <div className="controls-col">
           <ControlsPanel
-          // Text
-          inputText={inputText}
-          onInputChange={setInputText}
+          // Content type
+          qrType={qrType}
+          onQrType={setQrType}
+          typeFields={typeFields}
+          onFieldChange={updateField}
           onGenerate={() => generateRef.current?.()}
           onClear={clearAll}
 
