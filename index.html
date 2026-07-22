@@ -1,17 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="QRCraft — Free QR code generator. No account, no watermark, works offline." />
-  <title>QRCraft — Free QR Code Generator</title>
+
+  <!-- ── Primary SEO ────────────────────────────────────────────── -->
+  <title>QRCraft — Free QR Code Generator | No Signup, No Watermark</title>
+  <meta name="description" content="Create custom QR codes instantly — choose colors, add a logo, pick from 5 unique styles, and export PNG or SVG. Free, private, works 100% offline. No account required." />
+  <meta name="keywords" content="QR code generator, free QR code, custom QR code, QR code with logo, QR code creator, online QR generator, PNG QR code, SVG QR code, QR code no watermark, offline QR code, qr code color, qr code design" />
+  <meta name="author" content="Nabil El Hakimi" />
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="canonical" href="https://nabilelhakimi.github.io/QR-Craft/" />
+
+  <!-- ── Open Graph (Facebook, LinkedIn, WhatsApp…) ─────────────── -->
+  <meta property="og:type"          content="website" />
+  <meta property="og:site_name"     content="QRCraft" />
+  <meta property="og:title"         content="QRCraft — Free QR Code Generator" />
+  <meta property="og:description"   content="Create custom QR codes instantly. Custom colors, logo overlay, 5 visual styles, PNG & SVG export. Free, no signup, 100% private." />
+  <meta property="og:url"           content="https://nabilelhakimi.github.io/QR-Craft/" />
+  <meta property="og:image"         content="https://nabilelhakimi.github.io/QR-Craft/og-image.png" />
+  <meta property="og:image:width"   content="1200" />
+  <meta property="og:image:height"  content="630" />
+  <meta property="og:image:alt"     content="QRCraft QR Code Generator dashboard" />
+  <meta property="og:locale"        content="en_US" />
+
+  <!-- ── Twitter / X Card ──────────────────────────────────────── -->
+  <meta name="twitter:card"         content="summary_large_image" />
+  <meta name="twitter:title"        content="QRCraft — Free QR Code Generator" />
+  <meta name="twitter:description"  content="Custom QR codes with colors, logo & 5 styles. PNG & SVG export. Free, no signup, works offline." />
+  <meta name="twitter:image"        content="https://nabilelhakimi.github.io/QR-Craft/og-image.png" />
+  <meta name="twitter:image:alt"    content="QRCraft QR Code Generator" />
+
+  <!-- ── Icons & web manifest ───────────────────────────────────── -->
+  <link rel="icon"             type="image/svg+xml"  href="/favicon.svg" />
+  <link rel="icon"             type="image/png" sizes="32x32" href="/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest"         href="/site.webmanifest" />
+
+  <!-- ── Fonts ─────────────────────────────────────────────────── -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- ── Structured data (JSON-LD) ─────────────────────────────── -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://nabilelhakimi.github.io/QR-Craft/#website",
+        "url": "https://nabilelhakimi.github.io/QR-Craft/",
+        "name": "QRCraft",
+        "description": "Free QR code generator — custom colors, logo overlay, 5 styles, PNG & SVG export.",
+        "inLanguage": "en-US"
+      },
+      {
+        "@type": "WebApplication",
+        "@id": "https://nabilelhakimi.github.io/QR-Craft/#app",
+        "name": "QRCraft — Free QR Code Generator",
+        "url": "https://nabilelhakimi.github.io/QR-Craft/",
+        "description": "Free, private QR code generator. Create custom QR codes with colors, logos, and 5 unique visual styles. Export as PNG or SVG. No account, no watermark, works 100% offline.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": "en-US",
+        "isAccessibleForFree": true,
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "featureList": [
+          "Instant QR code generation",
+          "5 unique module styles: Classic, Rounded, Dots, Diamond, Fluid",
+          "Custom foreground and background colors with preset swatches",
+          "Logo / icon overlay with adjustable size",
+          "Error correction levels L, M, Q, H",
+          "PNG and SVG export",
+          "Dark mode",
+          "Drag and drop .txt file support",
+          "100% offline — no data ever leaves your device",
+          "No account or signup required",
+          "No watermark"
+        ],
+        "screenshot": "https://nabilelhakimi.github.io/QR-Craft/og-image.png",
+        "creator": {
+          "@type": "Person",
+          "name": "Nabil El Hakimi",
+          "url": "https://github.com/NabilElHakimi"
+        },
+        "isPartOf": { "@id": "https://nabilelhakimi.github.io/QR-Craft/#website" }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <div id="root"></div>
-  <!-- qrcodejs must load before the React app so window.QRCode is available -->
   <script src="/qrcode.min.js"></script>
   <script type="module" src="/src/main.jsx"></script>
 </body>

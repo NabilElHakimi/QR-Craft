@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://nabilelhakimi.github.io/QR-Craft/sitemap.xml

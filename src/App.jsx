@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Navbar from './components/Navbar.jsx'
-import Hero from './components/Hero.jsx'
 import ControlsPanel from './components/ControlsPanel.jsx'
 import PreviewPanel from './components/PreviewPanel.jsx'
-import Features from './components/Features.jsx'
 import Footer from './components/Footer.jsx'
+import Toast from './components/Toast.jsx'
 import { computeMatrix, renderToCanvas, overlayLogo, buildSVG } from './utils/qrUtils.js'
 
 const STORAGE_KEY = 'qrcraft_v4'
-const DEFAULTS = { fgColor: '#000000', bgColor: '#ffffff', size: 300, margin: 4, ecLevel: 'M', logoSize: 25, darkMode: false }
+const DEFAULTS = { fgColor: '#000000', bgColor: '#ffffff', size: 300, margin: 4, ecLevel: 'M', logoSize: 25, darkMode: false, qrStyle: 'classic' }
 
 function loadSaved() {
   try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } }
@@ -30,6 +29,7 @@ export default function App() {
   const [margin,   setMargin]   = useState(DEFAULTS.margin)
   const [ecLevel,  setEcLevel]  = useState(DEFAULTS.ecLevel)
   const [logoSize, setLogoSize] = useState(DEFAULTS.logoSize)
+  const [qrStyle,  setQrStyle]  = useState(DEFAULTS.qrStyle)
 
   // ── Text input
   const [inputText, setInputText] = useState('')
@@ -61,7 +61,7 @@ export default function App() {
 
   // Always-fresh snapshot — updated on every render to avoid stale closures
   const snap = useRef({})
-  snap.current = { fgColor, bgColor, size, margin, ecLevel, logoSize, logoData, logoImage, logoECForced, inputText, darkMode }
+  snap.current = { fgColor, bgColor, size, margin, ecLevel, logoSize, logoData, logoImage, logoECForced, inputText, darkMode, qrStyle }
 
   // ── Dark mode
   useEffect(() => {
@@ -76,6 +76,7 @@ export default function App() {
     setSize(s.size);       setMargin(s.margin)
     setEcLevel(s.ecLevel); setLogoSize(s.logoSize)
     setDarkMode(s.darkMode)
+    if (s.qrStyle) setQrStyle(s.qrStyle)
   }, [])
 
   function persistSettings() {
@@ -85,7 +86,7 @@ export default function App() {
         fgColor: s.fgColor, bgColor: s.bgColor,
         size: s.size,       margin: s.margin,
         ecLevel: s.ecLevel, logoSize: s.logoSize,
-        darkMode: s.darkMode,
+        darkMode: s.darkMode, qrStyle: s.qrStyle,
       }))
     } catch {}
   }
@@ -106,12 +107,12 @@ export default function App() {
   const generateRef = useRef(null)
   generateRef.current = function generateQR(explicitText) {
     if (typeof window.QRCode === 'undefined') {
-      showError('❌ QR library not loaded — make sure qrcode.min.js is in the public/ folder.')
+      showError('QR library not loaded — make sure qrcode.min.js is in the public/ folder.')
       return
     }
     const s     = snap.current
     const input = (explicitText ?? s.inputText).trim()
-    if (!input)            { showError('⚠️ Please enter some text or URL first.'); return }
+    if (!input)            { showError('Please enter some text or URL first.'); return }
     if (isGenRef.current)  return
 
     isGenRef.current = true
@@ -121,18 +122,18 @@ export default function App() {
       try {
         const matrix = computeMatrix(input, s.ecLevel)
         const canvas = canvasRef.current
-        renderToCanvas(matrix, canvas, s.size, s.margin, s.fgColor, s.bgColor)
+        renderToCanvas(matrix, canvas, s.size, s.margin, s.fgColor, s.bgColor, s.qrStyle)
         if (s.logoImage) overlayLogo(canvas, s.size, s.logoImage, s.logoSize)
 
-        setSvgData(buildSVG(matrix, s.margin, s.fgColor, s.bgColor, s.logoData, s.logoImage ? s.logoSize : null))
+        setSvgData(buildSVG(matrix, s.margin, s.fgColor, s.bgColor, s.logoData, s.logoImage ? s.logoSize : null, s.qrStyle))
         if (qrFrameRef.current) qrFrameRef.current.style.background = s.bgColor
         setResolution(`${s.size} × ${s.size} px`)
         setIsLoading(false); setQrVisible(true)
-        showSuccess('✅ QR code generated!')
+        showSuccess('QR code generated successfully!')
         persistSettings()
       } catch (err) {
         setIsLoading(false)
-        showError(`❌ ${friendlyError(err)}`)
+        showError(friendlyError(err))
         console.error('[QRCraft]', err)
       } finally {
         isGenRef.current = false
@@ -151,7 +152,7 @@ export default function App() {
   useEffect(() => {
     if (snap.current.inputText.trim()) scheduleAutoGenerate()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fgColor, bgColor, size, margin, ecLevel, logoSize, logoImage, scheduleAutoGenerate])
+  }, [fgColor, bgColor, size, margin, ecLevel, logoSize, logoImage, qrStyle, scheduleAutoGenerate])
 
   // Re-generate when text changes (debounced)
   useEffect(() => {
@@ -180,12 +181,12 @@ export default function App() {
 
   async function copyToClipboard() {
     const text = snap.current.inputText.trim()
-    if (!text) { showError('⚠️ Nothing to copy!'); return }
+    if (!text) { showError('Nothing to copy — enter some content first.'); return }
     try {
       await navigator.clipboard.writeText(text)
-      showSuccess('📋 Copied to clipboard!')
+      showSuccess('Content copied to clipboard!')
     } catch {
-      showError('❌ Copy failed — please copy manually.')
+      showError('Copy failed — please copy the text manually.')
     }
   }
 
@@ -205,8 +206,8 @@ export default function App() {
 
   // ── Logo file handler
   async function handleLogoFile(file) {
-    if (file.size > 2 * 1024 * 1024) { showError('⚠️ Logo too large (max 2 MB).'); return }
-    if (!file.type.startsWith('image/')) { showError('⚠️ Please choose an image file.'); return }
+    if (file.size > 2 * 1024 * 1024) { showError('Logo file is too large — maximum size is 2 MB.'); return }
+    if (!file.type.startsWith('image/')) { showError('Please choose an image file (PNG, JPG, or SVG).'); return }
     try {
       const dataUrl = await new Promise((res, rej) => {
         const r = new FileReader()
@@ -224,7 +225,7 @@ export default function App() {
       setLogoFilename(file.name.length > 28 ? file.name.slice(0, 25) + '…' : file.name)
       if (ecLevel !== 'H') { setEcLevel('H'); setLogoECForced(true) }
     } catch {
-      showError('❌ Could not load the logo image.')
+      showError('Could not load the logo image.')
     }
   }
 
@@ -251,7 +252,7 @@ export default function App() {
     if (!file) return
     if (file.type.startsWith('image/')) { await handleLogoFile(file); return }
     if (!file.type.startsWith('text/') && !file.name.endsWith('.txt')) {
-      showError('⚠️ Drop a .txt file or an image for the logo.')
+      showError('Drop a .txt file to load content, or an image to set the logo.')
       return
     }
     try {
@@ -264,7 +265,7 @@ export default function App() {
       const trimmed = content.trim().slice(0, 2300)
       setInputText(trimmed)
       setTimeout(() => generateRef.current?.(trimmed), 0)
-    } catch { showError('❌ Could not read the file.') }
+    } catch { showError('Could not read the file.') }
   }
 
   // ── Logo zone drag & drop handlers
@@ -278,12 +279,15 @@ export default function App() {
   }
 
   return (
-    <div>
+    <div className="app-shell">
       <Navbar darkMode={darkMode} onToggleDark={() => setDarkMode(d => !d)} />
-      <Hero />
 
-      <main className="workspace">
-        <ControlsPanel
+      <main className="dashboard">
+        <h1 className="sr-only">QRCraft — Free QR Code Generator</h1>
+
+        {/* ── Left: Controls panel ── */}
+        <div className="controls-col">
+          <ControlsPanel
           // Text
           inputText={inputText}
           onInputChange={setInputText}
@@ -316,6 +320,10 @@ export default function App() {
           onLogoDragOver={handleLogoDragOver}
           onLogoDrop={handleLogoDrop}
 
+          // QR Style
+          qrStyle={qrStyle}
+          onQrStyle={setQrStyle}
+
           // Size & margin
           size={size}
           margin={margin}
@@ -328,25 +336,73 @@ export default function App() {
           onPanelDragLeave={handlePanelDragLeave}
           onPanelDragOver={handlePanelDragOver}
           onPanelDrop={handlePanelDrop}
-        />
+          />
+        </div>
 
-        <PreviewPanel
-          canvasRef={canvasRef}
-          qrFrameRef={qrFrameRef}
-          qrVisible={qrVisible}
-          isLoading={isLoading}
-          svgData={svgData}
-          resolution={resolution}
-          errorMsg={errorMsg}
-          successMsg={successMsg}
-          onDownloadPNG={downloadPNG}
-          onDownloadSVG={downloadSVG}
-          onCopyText={copyToClipboard}
-        />
+        {/* ── Right: Stats row + Preview ── */}
+        <div className="preview-col">
+
+          <div className="stats-row">
+            <div className="stat-card">
+              <div className="stat-icon stat-icon--indigo" aria-hidden="true">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m15 4-1 1 5 5 1-1zM2 22l10-10M10 6 8 8M6 10l-2 2M20 14l-2 2M14 20l-2 2"/>
+                </svg>
+              </div>
+              <div className="stat-body">
+                <p className="stat-value">5 Styles</p>
+                <p className="stat-label">Module patterns</p>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon stat-icon--green" aria-hidden="true">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12M12 16.5V3"/>
+                </svg>
+              </div>
+              <div className="stat-body">
+                <p className="stat-value">PNG & SVG</p>
+                <p className="stat-label">Export formats</p>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon stat-icon--purple" aria-hidden="true">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+              </div>
+              <div className="stat-body">
+                <p className="stat-value">100% Private</p>
+                <p className="stat-label">No data leaves device</p>
+              </div>
+            </div>
+          </div>
+
+          <PreviewPanel
+            canvasRef={canvasRef}
+            qrFrameRef={qrFrameRef}
+            qrVisible={qrVisible}
+            isLoading={isLoading}
+            svgData={svgData}
+            resolution={resolution}
+            onDownloadPNG={downloadPNG}
+            onDownloadSVG={downloadSVG}
+            onCopyText={copyToClipboard}
+          />
+
+        </div>
       </main>
 
-      <Features />
       <Footer />
+
+      <Toast
+        successMsg={successMsg}
+        errorMsg={errorMsg}
+        onDismissSuccess={() => setSuccessMsg('')}
+        onDismissError={() => setErrorMsg('')}
+      />
     </div>
   )
 }
